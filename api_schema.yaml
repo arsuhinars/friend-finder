@@ -37,6 +37,9 @@ info:
     - `9` - User with such login already exist (Status code 400)
   
     - `10` - Invalid confirmation code (Status code 400)
+
+    User errors:
+    - `11` - Photo with this index doesn't exist (Status code 404)
   contact:
     name: Arseny Fedorov
     url: https://t.me/arsuhinars
@@ -114,7 +117,7 @@ paths:
         Client sends user's registration data: name, E-Mail and password. Then
         server creates user profile. After user have to confirm E-Mail (look
         `/user/send_confirm_message` method), otherwise profile would be
-        removed.
+        deleted.
       operationId: create_user
       requestBody:
         description: User registration data
@@ -163,9 +166,7 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                code: { type: string }
+              $ref: "#/components/schemas/confirmation_code"
       responses:
         "200":
           $ref: "#/components/responses/success_response"
@@ -203,33 +204,57 @@ paths:
         default:
           $ref: "#/components/responses/error_response"
 
-  /user/photos:
+  /user/photos_count:
     get:
       tags: [ User ]
-      summary: Get URLs to user photos
-      operationId: get_user_photos
+      summary: Get count of user photos
+      operationId: get_user_photos_count
       security:
         - access_token: []
       responses:
         "200":
           description: Operation was successfuly done
           content:
-            application/json:
+            image/webp:
               schema:
-                type: array
-                items: { type: string, format: uri }
-                maxLength: *max-user-photos
+                type: object
+                properties:
+                  photos_count: { type: integer }
         default:
           $ref: "#/components/responses/error_response"
 
-  /user/photo/:
+  /user/photo/{index}:
+    get:
+      tags: [ User ]
+      summary: Get user photo by index
+      operationId: get_user_photo
+      security:
+        - access_token: []
+      parameters:
+        - name: index
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 0
+            maximum: *max-user-photos
+            exclusiveMaximum: true
+          example: 0
+      responses:
+        "200":
+          description: Operation was successfuly done
+          content:
+            image/webp:
+              schema: { type: string, format: binary }
+        default:
+          $ref: "#/components/responses/error_response"
     post:
       tags: [ User ]
       summary: Add or update user photo by its index
       description: |
-        When photo with `index` doesn't exist or isn't specified, index will
-        be set to amount of photos. For example, if there are 3 photos (indexes
-        0, 1 and 2 are occupied) and `index` is 5, added photo will be at index 3.
+        When photo with `index` doesn't exist, index will be set to amount of
+        photos. For example, if there are 3 photos (indexes 0, 1 and 2 are
+        occupied) and `index` is 4, added photo will be at index 3.
 
         When no photo is provided, this photo under `index` will be deleted. In
         this case the next indexes will be shifted.
@@ -238,42 +263,133 @@ paths:
         - access_token: []
       parameters:
         - name: index
-          in: query
-          required: false
-          description: Index of photo
+          in: path
+          required: true
           schema:
             type: integer
             minimum: 0
             maximum: *max-user-photos
             exclusiveMaximum: true
+          example: 0
       requestBody:
         required: false
         content:
           image/jpeg:
-            schema:
-              type: string
-              format: binary
+            schema: { type: string, format: binary }
+          image/webp:
+            schema: { type: string, format: binary }
       responses:
         "200":
           $ref: "#/components/responses/success_response"
         default:
           $ref: "#/components/responses/error_response"
 
+  /user/avatar:
+    get:
+      tags: [ User ]
+      summary: Get user avatar image
+      description: >
+        When response body is empty, user doesn't have any avatar.
+      operationId: get_user_avatar
+      security:
+        - access_token: []
+      responses:
+        "200":
+          description: Operation was successfuly done
+          content:
+            image/webp:
+              schema: { type: string, format: binary }
+        default:
+          $ref: "#/components/responses/error_response"
+    post:
+      tags: [ User ]
+      summary: Add or update user avatar image
+      description: >
+        User avatar image will be cropped to fit the square. When request body
+        is empty, user avatar will be deleted. Keep in mind that avatar image
+        should fit the circle in the UI.
+      operationId: set_user_avatar
+      security:
+        - access_token: []
+      requestBody:
+        required: false
+        content:
+          image/jpeg:
+            schema: { type: string, format: binary }
+          image/webp:
+            schema: { type: string, format: binary }
+      responses:
+        "200":
+          $ref: "#/components/responses/success_response"
+        default:
+          $ref: "#/components/responses/error_response"
 
-  # /user/password_change_request:
-  #   post:
-  #     tags: [ User ]
-  #     summary: Send request to change user's password
-  #     operationId: send_password_change_request
-  #     security:
-  #       - access_token: []
-  #     requestBody:
-  #       content:
-  #         application/json:
-  #           schema:
-  #             type: object
-  #             properties:
-  #               new_password: { type: string }
+  /user/password_change_request:
+    post:
+      tags: [ User ]
+      summary: Send request to change user's password
+      description: >
+        Server sends confirmation code to user E-Mail. Then it should be
+        confirmed by `/user/confirm_password_change` method.
+      operationId: send_password_change_request
+      security:
+        - access_token: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                new_password: { type: string }
+      responses:
+        "200":
+          $ref: "#/components/responses/success_response"
+        default:
+          $ref: "#/components/responses/error_response"
+
+  /user/confirm_password_changing:
+    post:
+      tags: [ User ]
+      summary: Confirm password changing
+      description: >
+        This method confirms password changing made by
+        `/user/password_change_request`. Client should send code, enter by user
+        in `code` property.
+      operationId: confirm_password_changing
+      security:
+        - access_token: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/confirmation_code"
+      responses:
+        "200":
+          $ref: "#/components/responses/success_response"
+        default:
+          $ref: "#/components/responses/error_response"
+
+  /profiles:
+    get:
+      tags: [ Profiles ]
+      summary: Get next random profiles
+      security:
+        - access_token: []
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 5
+      responses:
+        "200":
+          description: Operation was successfuly done
+          content:
+            application/json:
+              schema:
+                type: array
 
 
 components:
@@ -316,6 +432,12 @@ components:
         access_token: { type: string }
         refresh_token: { type: string }
 
+    confirmation_code:
+      title: ConfirmationCode
+      type: object
+      properties:
+        code: { type: string }
+
     error_response:
       title: ErrorResponse
       type: object
@@ -333,7 +455,7 @@ components:
           schema: { $ref: "#/components/schemas/auth_response" }
 
     success_response:
-      description: Operation was succe  ssfuly done
+      description: Operation was successfuly done
       content:
         application/json:
           schema: { type: object }
@@ -357,7 +479,7 @@ components:
 tags:
   - name: Auth
   - name: User
-  - name: Searching
-    description: Methods for searching other users' profiles
+  - name: Profiles
+    description: Methods for searching and rating other users' profiles
   - name: Messages
   - name: Updates
