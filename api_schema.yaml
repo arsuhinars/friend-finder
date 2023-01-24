@@ -1,0 +1,363 @@
+x-definitions:
+  - &max-user-photos          5
+  - &max-user-interests       10
+  - &short-description-length 120
+  - &description-length       500
+
+
+openapi: "3.0.3"
+
+
+info:
+  title: Friend-finder
+  description: |
+    [Project repository](https://github.com/arsuhinars/friend-finder)
+  
+    ### Error codes:
+    Common errors:
+    - `0` - Unexpected error (Status code: 500)
+
+    - `1` - Invalid input format (Status code: 400)
+
+    - `2` - Authorization required (Status code: 401)
+
+    - `3` - Access is denied (Status code: 403)
+
+    - `4` - Content was not found (Status code: 404)
+
+    - `5` - Invalid access token (Status code: 400)
+
+    Authorization errors:
+    - `6` - Invalid login or password (Status code: 404)
+
+    - `7` - Invalid refresh token (Status code: 400)
+
+    - `8` - User profile is not confirmed by E-Mail (Status code: 400)
+
+    - `9` - User with such login already exist (Status code 400)
+  
+    - `10` - Invalid confirmation code (Status code 400)
+  contact:
+    name: Arseny Fedorov
+    url: https://t.me/arsuhinars
+  license:
+    name: MIT License
+  version: "1.0"
+
+
+servers:
+  - url: http://localhost:{port}/
+    description: Local development server
+    variables:
+      port:
+        default: "8080"
+
+
+paths:
+  /authorize:
+    get:
+      tags: [ Auth ]
+      summary: Get access and refresh token
+      description: >
+        In request body client sends user credentials (login, password). In
+        response server sends access and refresh tokens. Access token is used to
+        access most of methods. Refresh token is used to easily get new access
+        token when old one expired.
+      operationId: authorize
+      requestBody:
+        description: Client credentials
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                login: { type: string, example: example@domain.com }
+                password:
+                  type: string
+                  format: password
+                  example: qwerty12
+      responses:
+        "200":
+          $ref: "#/components/responses/auth_response"
+        default:
+          $ref: "#/components/responses/error_response"
+
+  /refresh_token:
+    get:
+      tags: [ Auth ]
+      summary: Refresh access token
+      description: >
+        Client uses this method for getting new access token when old one was
+        expired. In response server sends new access and refresh tokens.
+      operationId: refresh_token
+      requestBody:
+        description: Refresh token
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                refresh_token: { type: string }
+      responses:
+        "200":
+          $ref: "#/components/responses/auth_response"
+        default:
+          $ref: "#/components/responses/error_response"
+
+  /user/create:
+    post:
+      tags: [ User ]
+      summary: Create new user profile
+      description: >
+        Client sends user's registration data: name, E-Mail and password. Then
+        server creates user profile. After user have to confirm E-Mail (look
+        `/user/send_confirm_message` method), otherwise profile would be
+        removed.
+      operationId: create_user
+      requestBody:
+        description: User registration data
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string, example: Peter }
+                email: { type: string, example: example@domain.com }
+                password: { type: string, example: qwerty12 }
+      responses:
+        "200":
+          $ref: "#/components/responses/success_response"
+        default:
+          $ref: "#/components/responses/error_response"
+
+  /user/send_confirm_message:
+    post:
+      tags: [ User ]
+      summary: Request server to send new E-Mail confirmation message
+      description: >
+        This method sends message with confirmation code. User have to enter it
+        in UI, then application have to send it by `/user/confirm_email` method
+        to confirm E-Mail of user profile.
+      operationId: send_confirm_message
+      security:
+        - access_token: []
+      responses:
+        "200":
+          $ref: "#/components/responses/success_response"
+        default:
+          $ref: "#/components/responses/error_response"
+  
+  /user/confirm_email:
+    post:
+      tags: [ User ]
+      summary: Confirm user E-Mail
+      operationId: confirm_email
+      security:
+        - access_token: []
+      requestBody:
+        description: Confirmation code that user entered
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code: { type: string }
+      responses:
+        "200":
+          $ref: "#/components/responses/success_response"
+        default:
+          $ref: "#/components/responses/error_response"
+
+  /user/profile:
+    get:
+      tags: [ User ]
+      summary: Get data about current user profile
+      operationId: get_user_profile
+      security:
+        - access_token: []
+      responses:
+        "200":
+          description: Operation was successfuly done
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/user_profile" }
+        default:
+          $ref: "#/components/responses/error_response"
+    post:
+      tags: [ User ]
+      summary: Update current user's profile
+      operationId: set_user_profile
+      security:
+        - access_token: []
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/user_profile" }
+      responses:
+        "200":
+          $ref: "#/components/responses/success_response"
+        default:
+          $ref: "#/components/responses/error_response"
+
+  /user/photos:
+    get:
+      tags: [ User ]
+      summary: Get URLs to user photos
+      operationId: get_user_photos
+      security:
+        - access_token: []
+      responses:
+        "200":
+          description: Operation was successfuly done
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { type: string, format: uri }
+                maxLength: *max-user-photos
+        default:
+          $ref: "#/components/responses/error_response"
+
+  /user/photo/:
+    post:
+      tags: [ User ]
+      summary: Add or update user photo by its index
+      description: |
+        When photo with `index` doesn't exist or isn't specified, index will
+        be set to amount of photos. For example, if there are 3 photos (indexes
+        0, 1 and 2 are occupied) and `index` is 5, added photo will be at index 3.
+
+        When no photo is provided, this photo under `index` will be deleted. In
+        this case the next indexes will be shifted.
+      operationId: set_user_photo
+      security:
+        - access_token: []
+      parameters:
+        - name: index
+          in: query
+          required: false
+          description: Index of photo
+          schema:
+            type: integer
+            minimum: 0
+            maximum: *max-user-photos
+            exclusiveMaximum: true
+      requestBody:
+        required: false
+        content:
+          image/jpeg:
+            schema:
+              type: string
+              format: binary
+      responses:
+        "200":
+          $ref: "#/components/responses/success_response"
+        default:
+          $ref: "#/components/responses/error_response"
+
+
+  # /user/password_change_request:
+  #   post:
+  #     tags: [ User ]
+  #     summary: Send request to change user's password
+  #     operationId: send_password_change_request
+  #     security:
+  #       - access_token: []
+  #     requestBody:
+  #       content:
+  #         application/json:
+  #           schema:
+  #             type: object
+  #             properties:
+  #               new_password: { type: string }
+
+
+components:
+  schemas:
+    user_profile:
+      title: UserProfile
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        birthdate: 
+          type: string
+          format: date
+        location: { type: string }
+        gender: { type: string, enum: [ male, female ] }
+        target_gender: { type: string, enum: [ males, females ] }
+        interests:
+          type: array
+          items: { type: string }
+          uniqueItems: true
+          maxLength: *max-user-interests
+        short_description: { type: string, maxLength: *short-description-length }
+        description: { type: string, maxLength: *description-length }
+      required: [ id, name ]
+      example:
+        id: 1
+        name: Peter
+        birthdate: "2000-01-01"
+        location: Москва
+        gender: male
+        target_gender: females
+        interests: [ sport, it, family ]
+        short_description: Brief description
+        description: More detailed description
+
+    auth_response:
+      title: AuthResponse
+      type: object
+      properties:
+        access_token: { type: string }
+        refresh_token: { type: string }
+
+    error_response:
+      title: ErrorResponse
+      type: object
+      properties:
+        error_code: { type: integer, example: 0 }
+        error_description:
+          type: integer
+          example: Unexpected error
+
+  responses:
+    auth_response:
+      description: New access and refresh tokens
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/auth_response" }
+
+    success_response:
+      description: Operation was succe  ssfuly done
+      content:
+        application/json:
+          schema: { type: object }
+
+    error_response:
+      description: Error response format. Look at error codes at the top to get
+        more info.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/error_response" }
+            
+  securitySchemes:
+    access_token:
+      type: apiKey
+      description: Client uses `access_token` to access some of the API methods.
+        Look at `/authorize` and `/refresh_token` methods to get more info.
+      name: access_token
+      in: query
+
+
+tags:
+  - name: Auth
+  - name: User
+  - name: Searching
+    description: Methods for searching other users' profiles
+  - name: Messages
+  - name: Updates
