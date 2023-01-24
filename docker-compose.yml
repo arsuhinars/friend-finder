@@ -1,0 +1,63 @@
+version: "2.13.0"
+
+services:
+  backend:
+    build:
+      context: backend
+      target: base
+    environment:
+      BACKEND_PORT: $BACKEND_PORT
+    ports:
+      - $BACKEND_PORT
+    secrets:
+      - redis-username
+      - redis-password
+      - postgres-username
+      - postgres-password
+    depends_on:
+      - redis
+      - postgres
+
+  redis:
+    image: redis:7-alpine
+    restart: always
+    volumes:
+      - redis-data:/data/
+      - ./configs/redis.conf:/usr/local/etc/redis/redis.conf
+    secrets:
+      - redis.acl
+    command: [ "redis-server", "/usr/local/etc/redis/redis.conf" ]
+
+  postgres:
+    image: postgres:15-alpine
+    restart: always
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: $POSTGRES_DB
+      POSTGRES_USER_FILE: "/run/secrets/postgres-username"
+      POSTGRES_PASSWORD_FILE: "/run/secrets/postgres-password"
+    secrets:
+      - postgres-username
+      - postgres-password
+      - backend-postgres-username
+      - backend-postgres-password
+
+secrets:
+  redis.acl:
+    file: "secrets/redis.acl"
+
+  redis-username:
+    environment: "REDIS_USERNAME"
+  redis-password:
+    environment: "REDIS_PASSWORD"
+  
+  postgres-username:
+    environment: "POSTGRES_USERNAME"
+  postgres-password:
+    environment: "POSTGRES_PASSWORD"
+
+
+volumes:
+  redis-data:
+  postgres-data:

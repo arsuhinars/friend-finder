@@ -1,0 +1,12 @@
+# This compose file should be used only for development environment
+
+services:
+  redis:
+    restart: "no"
+    ports:
+      - 6379
+  
+  postgres:
+    restart: "no"
+    ports:
+      - 5432
