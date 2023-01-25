@@ -1,0 +1,13 @@
+# This compose file should be used for production
+
+services:
+  backend:
+    build:
+      target: production
+    command: [ "--reload" ]
+
+  redis:
+    restart: "yes"
+  
+  postgres:
+    restart: "yes"

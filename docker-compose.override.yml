@@ -1,6 +1,9 @@
 # This compose file should be used only for development environment
 
 services:
+  backend:
+    command: [ "--reload" ]
+
   redis:
     restart: "no"
     ports:
