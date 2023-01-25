@@ -5,10 +5,10 @@ services:
     build:
       context: backend
       target: base
-    environment:
-      BACKEND_PORT: $BACKEND_PORT
+      args:
+        BACKEND_PORT: 8000
     ports:
-      - $BACKEND_PORT
+      - "$BACKEND_PORT:8000"
     secrets:
       - redis-username
       - redis-password
@@ -40,8 +40,6 @@ services:
     secrets:
       - postgres-username
       - postgres-password
-      - backend-postgres-username
-      - backend-postgres-password
 
 secrets:
   redis.acl:

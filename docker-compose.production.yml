@@ -2,12 +2,12 @@
 
 services:
   backend:
+    restart: always
     build:
       target: production
-    command: [ "--reload" ]
 
   redis:
-    restart: "yes"
+    restart: always
   
   postgres:
-    restart: "yes"
+    restart: always

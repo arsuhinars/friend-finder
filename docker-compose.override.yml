@@ -2,7 +2,10 @@
 
 services:
   backend:
-    command: [ "--reload" ]
+    build:
+      target: development
+    volumes:
+      - ./backend/app:/backend/app
 
   redis:
     restart: "no"
