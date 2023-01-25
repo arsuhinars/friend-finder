@@ -40,6 +40,14 @@ info:
 
     User errors:
     - `11` - Photo with this index doesn't exist (Status code 404)
+
+    Profile errors:
+    - `12` - This profile was already rated (Status code 400)
+
+    Message errors:
+    - `13` - Invalid timestamp in the message (Status code 400)
+    
+    - `14` - Interlocutor for random chat wasn't found (Status code 500)
   contact:
     name: Arseny Fedorov
     url: https://t.me/arsuhinars
@@ -80,6 +88,7 @@ paths:
                   type: string
                   format: password
                   example: qwerty12
+              required: [ login, password ]
       responses:
         "200":
           $ref: "#/components/responses/auth_response"
@@ -103,6 +112,7 @@ paths:
               type: object
               properties:
                 refresh_token: { type: string }
+              required: [ refresh_token ]
       responses:
         "200":
           $ref: "#/components/responses/auth_response"
@@ -130,6 +140,7 @@ paths:
                 name: { type: string, example: Peter }
                 email: { type: string, example: example@domain.com }
                 password: { type: string, example: qwerty12 }
+              required: [ name, email, password ]
       responses:
         "200":
           $ref: "#/components/responses/success_response"
@@ -191,6 +202,7 @@ paths:
     post:
       tags: [ User ]
       summary: Update current user's profile
+      description: Field `id` is not required and it affects nothing.
       operationId: set_user_profile
       security:
         - access_token: []
@@ -204,18 +216,20 @@ paths:
         default:
           $ref: "#/components/responses/error_response"
 
-  /user/photos_count:
+  /user/{id}/photos_count:
     get:
       tags: [ User ]
-      summary: Get count of user photos
+      summary: Get amount of user photos by id
       operationId: get_user_photos_count
       security:
         - access_token: []
+      parameters:
+        - $ref: "#/components/parameters/user_id"
       responses:
         "200":
           description: Operation was successfuly done
           content:
-            image/webp:
+            application/json:
               schema:
                 type: object
                 properties:
@@ -223,14 +237,15 @@ paths:
         default:
           $ref: "#/components/responses/error_response"
 
-  /user/photo/{index}:
+  /user/{id}/photo/{index}:
     get:
       tags: [ User ]
-      summary: Get user photo by index
+      summary: Get user photo by index and id
       operationId: get_user_photo
       security:
         - access_token: []
       parameters:
+        - $ref: "#/components/parameters/user_id"
         - name: index
           in: path
           required: true
@@ -248,9 +263,11 @@ paths:
               schema: { type: string, format: binary }
         default:
           $ref: "#/components/responses/error_response"
+  
+  /user/photo/{index}:
     post:
       tags: [ User ]
-      summary: Add or update user photo by its index
+      summary: Add or update current user photo by its index
       description: |
         When photo with `index` doesn't exist, index will be set to amount of
         photos. For example, if there are 3 photos (indexes 0, 1 and 2 are
@@ -284,15 +301,17 @@ paths:
         default:
           $ref: "#/components/responses/error_response"
 
-  /user/avatar:
+  /user/{id}/avatar:
     get:
       tags: [ User ]
-      summary: Get user avatar image
+      summary: Get user avatar image by id
       description: >
         When response body is empty, user doesn't have any avatar.
       operationId: get_user_avatar
       security:
         - access_token: []
+      parameters:
+        - $ref: "#/components/parameters/user_id"
       responses:
         "200":
           description: Operation was successfuly done
@@ -301,9 +320,11 @@ paths:
               schema: { type: string, format: binary }
         default:
           $ref: "#/components/responses/error_response"
+
+  /user/avatar:
     post:
       tags: [ User ]
-      summary: Add or update user avatar image
+      summary: Add or update current user avatar image
       description: >
         User avatar image will be cropped to fit the square. When request body
         is empty, user avatar will be deleted. Keep in mind that avatar image
@@ -341,6 +362,7 @@ paths:
               type: object
               properties:
                 new_password: { type: string }
+              required: [ new_password ]
       responses:
         "200":
           $ref: "#/components/responses/success_response"
@@ -369,10 +391,11 @@ paths:
         default:
           $ref: "#/components/responses/error_response"
 
-  /profiles:
+  /select_profiles:
     get:
       tags: [ Profiles ]
       summary: Get next random profiles
+      operationId: select_profiles
       security:
         - access_token: []
       parameters:
@@ -390,6 +413,209 @@ paths:
             application/json:
               schema:
                 type: array
+                items: { $ref: "#/components/schemas/user_profile" }
+        default:
+          $ref: "#/components/responses/error_response"
+
+  /profile/{id}/like:
+    post:
+      tags: [ Profiles ]
+      summary: Like user profile by id
+      operationId: like_profile
+      security:
+        - access_token: []
+      parameters:
+        - $ref: "#/components/parameters/user_id"
+      responses:
+        "200":
+          $ref: "#/components/responses/success_response"
+        default:
+          $ref: "#/components/responses/error_response"
+
+  /profile/{id}/skip:
+    post:
+      tags: [ Profiles ]
+      summary: Skip user profile by id
+      description: It mean, that this profile won't appear during some time.
+      operationId: skip_profile
+      security:
+        - access_token: []
+      parameters:
+        - $ref: "#/components/parameters/user_id"
+      responses:
+        "200":
+          $ref: "#/components/responses/success_response"
+        default:
+          $ref: "#/components/responses/error_response"
+
+  /my_likes:
+    get:
+      tags: [ Profiles ]
+      summary: Get profiles of users that liked current user
+      operationId: get_users_likes
+      security:
+        - access_token: []
+      responses:
+        "200":
+          description: Operation was successfuly done
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/user_profile" }
+        default:
+          $ref: "#/components/responses/error_response"
+
+  /active_chats:
+    get:
+      tags: [ Messages ]
+      summary: Get active chats of current user
+      operationId: get_active_chats
+      security:
+        - access_token: []
+      responses:
+        "200":
+          description: Operation was successfuly done
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/user_chat" }
+        default:
+          $ref: "#/components/responses/error_response"
+
+  /start_random_chat:
+    post:
+      tags: [ Messages ]
+      summary: Start finding new random interlocutor
+      description: >
+        This method require longer timeout, because finding interlocutor may 
+        require some time. After finding them server will create anonymous chat.
+      operationId: start_random_chat
+      security:
+        - access_token: []
+      responses:
+        "200":
+          description: Interlocutor was successfuly found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/user_chat"
+        default:
+          $ref: "#/components/responses/error_response"
+
+  /chat/{id}/messages:
+    get:
+      tags: [ Messages ]
+      summary: Get list of messages in the chat by id
+      operationId: get_messages
+      security:
+        - access_token: []
+      parameters:
+        - $ref: "#/components/parameters/chat_id"
+        - name: limit
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, default: 10 }
+        - name: page
+          in: query
+          required: false
+          schema: { type: integer, minimum: 0, default: 0 }
+      responses:
+        "200":
+          description: Operation was successfuly done
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/message" }
+        default:
+          $ref: "#/components/responses/error_response"
+
+  /chat/{id}/send_message:
+    post:
+      tags: [ Messages ]
+      summary: Send message to the chat by id
+      description: >
+        Only `content` field is required. Besides, field `timestamp` can be
+        provided. It can be used if message sending was delayed due to
+        connection problems.
+      operationId: send_message
+      security:
+        - access_token: []
+      parameters:
+        - $ref: "#/components/parameters/chat_id"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/message"
+      responses:
+        "200":
+          $ref: "#/components/responses/success_response"
+        default:
+          $ref: "#/components/responses/error_response"
+
+  /chat/{id}/delete:
+    post:
+      tags: [ Messages ]
+      summary: Delete chat by id
+      operationId: delete_chat
+      security:
+        - access_token: []
+      parameters:
+        - $ref: "#/components/parameters/chat_id"
+      responses:
+        "200":
+          $ref: "#/components/responses/success_response"
+        default:
+          $ref: "#/components/responses/error_response"
+
+  /updates:
+    get:
+      tags: [ Updates ]
+      summary: Get all unhandled events
+      description: >
+        With no parameters returns all unhandled events since last call of this
+        method. Parameter `since` points since what timestamp events should be
+        returned. Keep in mind that for events saving server uses caching so
+        they won't be available forever.
+      operationId: get_updates
+      security:
+        - access_token: []
+      parameters:
+        - name: since
+          in: query
+          required: false
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Operation was successfuly done
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/event" }
+        default:
+          $ref: "#/components/responses/error_response"
+
+  /listen_updates:
+    get:
+      tags: [ Updates ]
+      summary: Update method with SSE support
+      operationId: listen_updates
+      security:
+        - access_token: []
+      responses:
+        "200":
+          description: Started new connection
+          content:
+            text/event-stream:
+              schema:
+                type: string
+        default:
+          $ref: "#/components/responses/error_response"
 
 
 components:
@@ -413,17 +639,17 @@ components:
           maxLength: *max-user-interests
         short_description: { type: string, maxLength: *short-description-length }
         description: { type: string, maxLength: *description-length }
-      required: [ id, name ]
-      example:
-        id: 1
-        name: Peter
-        birthdate: "2000-01-01"
-        location: Москва
-        gender: male
-        target_gender: females
-        interests: [ sport, it, family ]
-        short_description: Brief description
-        description: More detailed description
+      required: [ name ]
+      # example:
+      #   id: 1
+      #   name: Peter
+      #   birthdate: "2000-01-01"
+      #   location: Москва
+      #   gender: male
+      #   target_gender: females
+      #   interests: [ sport, it, family ]
+      #   short_description: Brief description
+      #   description: More detailed description
 
     auth_response:
       title: AuthResponse
@@ -437,6 +663,51 @@ components:
       type: object
       properties:
         code: { type: string }
+      required: [ code ]
+
+    user_chat:
+      title: UserChat
+      description: >
+        Object that contain information about active user chat. It has two
+        types: `dialog` and `anonymous`. In `dialog` chat type this object
+        contain information about interlocutor in `user_profile` field. In
+        `anonymous` chat there are no information about another user.
+      type: object
+      properties:
+        id: { type: integer }
+        type:
+          type: string
+          enum: [ dialog, anonymous ]
+        user_profile: { $ref: "#/components/schemas/user_profile" }
+      required: [ chat_type ]
+
+    message:
+      title: Message
+      type: object
+      properties:
+        id: { type: integer }
+        chat_id: { type: integer }
+        timestamp: { type: integer }
+        sender_id: { type: integer }
+        content: { type: string }
+      required: [ content ]
+
+    event:
+      title: Event
+      type: object
+      properties:
+        timestamp: { type: integer }
+        type:
+          type: string
+          enum: [ new_like, new_chat, new_message, chat_deleted ]
+        profile:
+          $ref: "#/components/schemas/user_profile"
+        chat:
+          $ref: "#/components/schemas/user_chat"
+        message:
+          $ref: "#/components/schemas/message"
+        chat_id: { type: integer }
+      required: [ type ]
 
     error_response:
       title: ErrorResponse
@@ -466,7 +737,21 @@ components:
       content:
         application/json:
           schema: { $ref: "#/components/schemas/error_response" }
-            
+  
+  parameters:
+    user_id:
+      name: id
+      in: path
+      required: true
+      schema: { type: integer }
+      description: User id
+    chat_id:
+      name: id
+      in: path
+      required: true
+      schema: { type: integer }
+      description: Chat id
+
   securitySchemes:
     access_token:
       type: apiKey
