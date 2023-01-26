@@ -8,6 +8,7 @@ fastapi = "*"
 uvicorn = {extras = ["standart"], version = "*"}
 sqlalchemy = "*"
 aioredis = "*"
+email-validator = "*"
 
 [dev-packages]
 
