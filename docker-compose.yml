@@ -7,13 +7,16 @@ services:
       target: base
       args:
         BACKEND_PORT: 8000
+    env_file:
+      - backend/.env
     ports:
       - "$BACKEND_PORT:8000"
+    environment:
+      REDIS_URL_FILE: "/run/secrets/backend-redis-url"
+      DATABASE_URL_FILE: "/run/secrets/backend-db-url"
     secrets:
-      - redis-username
-      - redis-password
-      - postgres-username
-      - postgres-password
+      - backend-redis-url
+      - backend-db-url
     depends_on:
       - redis
       - postgres
@@ -43,17 +46,17 @@ services:
 
 secrets:
   redis.acl:
-    file: "secrets/redis.acl"
+    file: secrets/redis.acl
 
-  redis-username:
-    environment: "REDIS_USERNAME"
-  redis-password:
-    environment: "REDIS_PASSWORD"
-  
   postgres-username:
-    environment: "POSTGRES_USERNAME"
+    environment: POSTGRES_USERNAME
   postgres-password:
-    environment: "POSTGRES_PASSWORD"
+    environment: POSTGRES_PASSWORD
+
+  backend-redis-url:
+    environment: BACKEND_REDIS_URL
+  backend-db-url:
+    environment: BACKEND_DB_URL
 
 
 volumes:
