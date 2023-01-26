@@ -38,16 +38,13 @@ info:
   
     - `10` - Invalid confirmation code (Status code 400)
 
-    User errors:
-    - `11` - Photo with this index doesn't exist (Status code 404)
-
     Profile errors:
-    - `12` - This profile was already rated (Status code 400)
+    - `11` - This profile was already rated (Status code 400)
 
     Message errors:
-    - `13` - Invalid timestamp in the message (Status code 400)
+    - `12` - Invalid timestamp in the message (Status code 400)
     
-    - `14` - Interlocutor for random chat wasn't found (Status code 500)
+    - `13` - Interlocutor for random chat wasn't found (Status code 500)
   contact:
     name: Arseny Fedorov
     url: https://t.me/arsuhinars
@@ -147,6 +144,25 @@ paths:
         default:
           $ref: "#/components/responses/error_response"
 
+  /user/is_email_confirmed:
+    get:
+      tags: [ User ]
+      summary: Check if user E-Mail is confirmed
+      operationId: is_email_confirmed
+      security:
+        - access_token: []
+      responses:
+        "200":
+          description: Operation was successfuly done
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  is_email_confirmed: { type: boolean }
+        default:
+          $ref: "#/components/responses/error_response"
+
   /user/send_confirm_message:
     post:
       tags: [ User ]
@@ -181,6 +197,25 @@ paths:
       responses:
         "200":
           $ref: "#/components/responses/success_response"
+        default:
+          $ref: "#/components/responses/error_response"
+
+  /user/email:
+    get:
+      tags: [ User ]
+      summary: Get user E-Mail
+      operationId: get_user_email
+      security:
+        - access_token: []
+      responses:
+        "200":
+          description: Operation was successfuly done
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  email: { type: string }
         default:
           $ref: "#/components/responses/error_response"
 
@@ -369,7 +404,7 @@ paths:
         default:
           $ref: "#/components/responses/error_response"
 
-  /user/confirm_password_changing:
+  /user/confirm_password_change:
     post:
       tags: [ User ]
       summary: Confirm password changing
@@ -377,14 +412,58 @@ paths:
         This method confirms password changing made by
         `/user/password_change_request`. Client should send code, enter by user
         in `code` property.
-      operationId: confirm_password_changing
+      operationId: confirm_password_change
+      security:
+        - access_token: []
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/confirmation_code" }
+      responses:
+        "200":
+          $ref: "#/components/responses/success_response"
+        default:
+          $ref: "#/components/responses/error_response"
+
+  /user/email_change_request:
+    post:
+      tags: [ User ]
+      summary: Send request to change user's E-Mail
+      description: >
+        Has the same behaviour as the `/user/password_change_request`, but for
+        user E-Mail.
+      operationId: send_email_change_request
       security:
         - access_token: []
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/confirmation_code"
+              type: object
+              properties:
+                new_email: { type: string }
+              required: [ new_email ]
+      responses:
+        "200":
+          $ref: "#/components/responses/success_response"
+        default:
+          $ref: "#/components/responses/error_response"
+  
+  /user/confirm_email_change:
+    post:
+      tags: [ User ]
+      summary: Confirm E-Mail changing
+      description: >
+        Confirms user's will to change the E-Mail. Then new E-Mail has to be
+        confirmed too by `/user/send_confirm_message` and `/user/confirm_email`
+        methods.
+      operationId: confirm_email_change
+      security:
+        - access_token: []
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/confirmation_code" }
       responses:
         "200":
           $ref: "#/components/responses/success_response"
@@ -596,7 +675,7 @@ paths:
             application/json:
               schema:
                 type: array
-                items: { $ref: "#/components/schemas/event" }
+                items: { $ref: "#/components/schemas/update_event" }
         default:
           $ref: "#/components/responses/error_response"
 
@@ -631,7 +710,7 @@ components:
           format: date
         location: { type: string }
         gender: { type: string, enum: [ male, female ] }
-        target_gender: { type: string, enum: [ males, females ] }
+        target_gender: { type: string, enum: [ male, female ] }
         interests:
           type: array
           items: { type: string }
@@ -640,16 +719,6 @@ components:
         short_description: { type: string, maxLength: *short-description-length }
         description: { type: string, maxLength: *description-length }
       required: [ name ]
-      # example:
-      #   id: 1
-      #   name: Peter
-      #   birthdate: "2000-01-01"
-      #   location: Москва
-      #   gender: male
-      #   target_gender: females
-      #   interests: [ sport, it, family ]
-      #   short_description: Brief description
-      #   description: More detailed description
 
     auth_response:
       title: AuthResponse
@@ -692,8 +761,8 @@ components:
         content: { type: string }
       required: [ content ]
 
-    event:
-      title: Event
+    update_event:
+      title: UpdateEvent
       type: object
       properties:
         timestamp: { type: integer }
@@ -707,7 +776,7 @@ components:
         message:
           $ref: "#/components/schemas/message"
         chat_id: { type: integer }
-      required: [ type ]
+      required: [ timestamp, type ]
 
     error_response:
       title: ErrorResponse
