@@ -16,8 +16,8 @@ RUN pipenv install --system --deploy --ignore-pipfile
 EXPOSE $BACKEND_PORT
 
 # Add entrypoint script
-COPY docker-entrypoint.sh /backend/docker-entrypoint.sh
-ENTRYPOINT [ "/backend/docker-entrypoint.sh" ]
+ENTRYPOINT [ "bash", "-c", "uvicorn app.main:app --port $BACKEND_PORT --host 0.0.0.0 $@", "docker-entrypoint.sh" ]
+
 
 # Development image
 FROM base as development
