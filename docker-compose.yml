@@ -11,12 +11,11 @@ services:
       - backend/.env
     ports:
       - "$BACKEND_PORT:8000"
-    environment:
-      REDIS_URL_FILE: "/run/secrets/backend-redis-url"
-      DATABASE_URL_FILE: "/run/secrets/backend-db-url"
     secrets:
-      - backend-redis-url
-      - backend-db-url
+      - source: backend-redis-url
+        target: redis_url
+      - source: backend-db-url
+        target: database_url
     depends_on:
       - redis
       - postgres
