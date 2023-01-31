@@ -9,51 +9,6 @@ class ErrorResponse(BaseModel):
     description: str
 
 
-class AuthRequest(BaseModel):
-    login: str
-    password: str
-
-
-class AuthResponse(BaseModel):
-    access_token: str
-    refresh_token: str
-
-
-class RefreshTokenRequest(BaseModel):
-    refresh_token: str
-
-
-class UserCreateRequest(BaseModel):
-    name: str
-    email: EmailStr
-    password: str
-
-
-class ConfirmationCode(BaseModel):
-    code: str
-
-
-class Gender(str, Enum):
-    MALE = 'male'
-    FEMALE = 'female'
-
-
-class UserProfile(BaseModel):
-    id: int | None
-    name: str
-    birthdate: date | None
-    location: str | None
-    gender: Gender | None
-    target_gender: Gender | None
-    interests: list[str]
-    short_description: str | None
-    description: str | None
-
-
-class PasswordChangeRequest(BaseModel):
-    new_password: str
-
-
 class ChatType(str, Enum):
     DIALOG = 'dialog'
     ANONYMOUS = 'anonymous'
