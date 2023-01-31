@@ -25,6 +25,16 @@ FROM base as development
 CMD [ "--reload" ]
 
 
+# Debug image
+FROM base as debug
+
+RUN pip install debugpy --no-cache-dir
+
+EXPOSE 5678
+
+ENTRYPOINT ["bash", "-c", "python -m debugpy --wait-for-client --listen 0.0.0.0:5678 -m uvicorn app.main:app --port $BACKEND_PORT --host 0.0.0.0 --reload $@", "docker-entrypoint.sh" ]
+
+
 # Production image
 FROM base as production
 

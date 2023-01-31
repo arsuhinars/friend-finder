@@ -1,0 +1,11 @@
+# This compose file is used for debugging Python code
+
+services:
+  backend:
+    build:
+      target: debug
+    volumes:
+      - ./backend/app:/backend/app
+    ports:
+      - 5678:5678
+  
