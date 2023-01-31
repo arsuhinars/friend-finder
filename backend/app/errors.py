@@ -1,94 +1,81 @@
-from enum import Enum
-
-from pydantic.dataclasses import dataclass
-
-from schemas import ErrorResponse
-
-
-@dataclass
-class ApiError:
-    status_code: int
-    error_code: int
-    description: str
-    
-    def get_response(self) -> ErrorResponse:
-        return ErrorResponse(code=self.error_code, description=self.description)
+from app.schemas import ErrorResponse
 
 
 class ApiException(Exception):
     """ Exception that was caused during API operation """
-    def __init__(self, error: ApiError):
-        self.error = error
+
+    def __init__(self, status_code: int, error_code: int, description: str):
+        self.status_code = status_code
+        self.error_code = error_code
+        self.description = description
+    
+    def get_response(self):
+        return ErrorResponse(
+            code=self.error_code,
+            description=self.description
+        )
 
 
-class ApiErrorType(ApiError, Enum):
-    UNEXPECTED_ERROR = ApiError(
-        status_code=500,
-        error_code=0,
-        description='Unexpected error'
-    )
-    INVALID_INPUT_FORMAT = ApiError(
-        status_code=400,
-        error_code=1,
-        description='Invalid input format'
-    )
-    AUTHORIZATION_REQUIRED = ApiError(
-        status_code=401,
-        error_code=2,
-        description='Authorization required'
-    )
-    ACCESS_DENIED = ApiError(
-        status_Code=403,
-        error_code=3,
-        description='Access is denied'
-    )
-    NOT_FOUND = ApiError(
-        status_code=404,
-        error_code=4,
-        description='Content was not found'
-    )
-    INVALID_ACCESS_TOKEN = ApiError(
-        status_Code=400,
-        error_code=5,
-        description='Invalid access token'
-    )
-    INVALID_AUTH_DATA = ApiError(
-        status_code=404,
-        error_code=6,
-        description='Invalid login or password'
-    )
-    INVALID_REFRESH_TOKEN = ApiError(
-        status_code=400,
-        error_code=7,
-        description='Invalid refresh token'
-    )
-    UNCONFIRMED_EMAIL = ApiError(
-        status_code=400,
-        error_code=8,
-        description='User profile is not confirmed by E-Mail'
-    )
-    LOGIN_ALREADY_TAKEN = ApiError(
-        status_code=400,
-        error_code=9,
-        description='User with such login already exist'
-    )
-    INVALID_CONFIRMATION_CODE = ApiError(
-        status_code=400,
-        error_code=10,
-        description='Invalid confirmation code'
-    )
-    RATED_PROFILE = ApiError(
-        status_code=400,
-        error_code=11,
-        description='This profile was already rated'
-    )
-    INVALID_MSG_TIMESTAMP = ApiError(
-        status_code=400,
-        error_code=12,
-        description='Invalid timestamp in the message'
-    )
-    NO_INTERLOCUTOR_FOUND = ApiError(
-        status_code=500,
-        error_code=13,
-        description="Interlocutor for random chat wasn't found"
-    )
+class UnexpectedError(ApiException):
+    def __init__(self):
+        super().__init__(500, 0, 'Unexpected error')
+
+
+class InvalidInputFormatError(ApiException):
+    def __init__(self):
+        super().__init__(400, 1, 'Invalid input format')
+
+
+class AuthorizationRequiredError(ApiException):
+    def __init__(self):
+        super().__init__(401, 2, 'Authorization required')
+
+
+class AccessDeniedError(ApiException):
+    def __init__(self):
+        super().__init__(403, 3, 'Access is denied')
+
+
+class NotFoundError(ApiException):
+    def __init__(self):
+        super().__init__(404, 4, 'Content was not found')
+
+
+class InvalidAccessTokenError(ApiException):
+    def __init__(self):
+        super().__init__(400, 5, 'Invalid access token')
+
+
+class InvalidAuthDataError(ApiException):
+    def __init__(self):
+        super().__init__(400, 6, 'Invalid login or password')
+
+
+class InvalidRefreshTokenError(ApiException):
+    def __init__(self):
+        super().__init__(400, 7, 'Invalid refresh token')
+
+
+class UnconfirmedEmailError(ApiException):
+    def __init__(self):
+        super().__init__(400, 8, 'User profile is not confirmed by E-Mail')
+
+
+class TakenLoginError(ApiException):
+    def __init__(self):
+        super().__init__(400, 9, 'User with such login already exist')
+
+
+class InvalidConfirmationCodeError(ApiException):
+    def __init__(self):
+        super().__init__(400, 10, 'Invalid confirmation code')
+
+
+class InvalidMessageTimestampError(ApiException):
+    def __init__(self):
+        super().__init__(400, 11, 'User with such login already exist')
+
+
+class InterlocutorNotFoundError(ApiException):
+    def __init__(self):
+        super().__init__(500, 12, 'Interlocutor for random chat wasn\'t found')
