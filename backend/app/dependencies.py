@@ -1,6 +1,11 @@
 from redis.asyncio import Redis
 
-from .main import app
+from app.settings import AppSettings
+
+
+@lru_cache
+def get_settings():
+    return AppSettings()
 
 
 async def get_redis_client() -> Redis:
